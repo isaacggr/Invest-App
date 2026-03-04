@@ -30,14 +30,16 @@ public class User {
     @Column(nullable = false)
     private boolean deleted = false;
 
-    // Construtor de domínio
     public User(String name, String email, String passwordHash) {
-        validarName(name);
-        validarEmail(email);
+        String normalizedName = normalizeName(name);
+        String normalizedEmail = normalizeEmail(email);
+
+        validarName(normalizedName);
+        validarEmail(normalizedEmail);
         validarPasswordHash(passwordHash);
 
-        this.name = name.trim();
-        this.email = email.trim().toLowerCase();
+        this.name = normalizedName;
+        this.email = normalizedEmail;
         this.passwordHash = passwordHash;
     }
 
@@ -50,8 +52,9 @@ public class User {
     }
 
     public void changeName(String name) {
-        validarName(name);
-        this.name = name.trim();
+        String normalizedName = normalizeName(name);
+        validarName(normalizedName);
+        this.name = normalizedName;
     }
 
     public void changePasswordHash(String newPasswordHash) {
@@ -60,10 +63,18 @@ public class User {
     }
 
     public void changeEmail(String email) {
-        validarEmail(email);
-        this.email = email.trim().toLowerCase();
+        String normalizedEmail = normalizeEmail(email);
+        validarEmail(normalizedEmail);
+        this.email = normalizedEmail;
     }
 
+    private String normalizeName(String name) {
+        return name == null ? null : name.trim();
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
+    }
 
     private void validarName(String name) {
         if (name == null || name.isBlank()) {
@@ -81,7 +92,17 @@ public class User {
         if (email.length() > 80) {
             throw new IllegalArgumentException("Email deve ter no máximo 80 caracteres");
         }
-        if (!email.contains("@")) {
+        if (email.contains(" ")) {
+            throw new IllegalArgumentException("Email inválido");
+        }
+
+        int at = email.indexOf('@');
+        if (at <= 0 || at != email.lastIndexOf('@') || at == email.length() - 1) {
+            throw new IllegalArgumentException("Email inválido");
+        }
+
+        int dotAfterAt = email.indexOf('.', at + 2);
+        if (dotAfterAt == -1 || dotAfterAt == email.length() - 1) {
             throw new IllegalArgumentException("Email inválido");
         }
     }

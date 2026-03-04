@@ -28,14 +28,11 @@ public class AccountService {
         this.userRepository = userRepository;
     }
 
-    // CREATE
     @Transactional
     public AccountResponse create(CreateAccountRequest req) {
         if (req == null) throw new IllegalArgumentException("Body não pode ser nulo");
 
         UUID userId = req.userId();
-        String name = req.name();
-
         if (userId == null) throw new IllegalArgumentException("userId é obrigatório");
 
         User user = userRepository.findById(userId)
@@ -45,7 +42,7 @@ public class AccountService {
             throw new BusinessRuleException("Usuário está inativo");
         }
 
-        String normalizedName = normalizeName(name);
+        String normalizedName = normalizeName(req.name());
 
         if (accountRepository.existsByUser_IdAndName(userId, normalizedName)) {
             throw new BusinessRuleException("Já existe uma carteira com esse nome para este usuário");
@@ -54,10 +51,15 @@ public class AccountService {
         Account account = new Account(user, normalizedName);
         accountRepository.save(account);
 
-        return toResponse(account);
+        return new AccountResponse(
+                account.getId(),
+                userId,               
+                account.getName(),
+                account.isActive()
+        );
     }
 
-    // READ - listar carteiras do usuário (somente não deletadas)
+    @Transactional(Transactional.TxType.SUPPORTS)
     public List<AccountResponse> listByUser(UUID userId) {
         if (userId == null) throw new IllegalArgumentException("userId é obrigatório");
 
@@ -67,11 +69,11 @@ public class AccountService {
 
         return accountRepository.findAllByUser_IdAndDeletedFalse(userId)
                 .stream()
-                .map(this::toResponse)
+                .map(acc -> toResponse(acc, userId)) 
                 .toList();
     }
 
-    // READ - por id (soft delete => 404)
+    @Transactional(Transactional.TxType.SUPPORTS)
     public AccountResponse getById(UUID accountId) {
         if (accountId == null) throw new IllegalArgumentException("accountId é obrigatório");
 
@@ -82,10 +84,11 @@ public class AccountService {
             throw new ResourceNotFoundException("Carteira não encontrada");
         }
 
-        return toResponse(acc);
+        UUID userId = acc.getUser().getId();
+
+        return toResponse(acc, userId);
     }
 
-    // UPDATE name (soft delete => 404)
     @Transactional
     public AccountResponse updateName(UUID accountId, UpdateAccountNameRequest req) {
         if (accountId == null) throw new IllegalArgumentException("accountId é obrigatório");
@@ -99,21 +102,17 @@ public class AccountService {
         }
 
         String newName = normalizeName(req.name());
+        UUID userId = acc.getUser().getId(); // ✅ transação aberta
 
-        UUID userId = acc.getUser().getId();
-
-        // impede duplicar nome em outra conta do mesmo usuário
         if (accountRepository.existsByUser_IdAndNameAndIdNot(userId, newName, acc.getId())) {
             throw new BusinessRuleException("Já existe uma carteira com esse nome para este usuário");
         }
 
         acc.changeName(newName);
-        accountRepository.save(acc);
 
-        return toResponse(acc);
+        return toResponse(acc, userId);
     }
 
-    // DELETE (soft delete => 404 se já deletada)
     @Transactional
     public void delete(UUID accountId) {
         if (accountId == null) throw new IllegalArgumentException("accountId é obrigatório");
@@ -126,12 +125,8 @@ public class AccountService {
         }
 
         acc.markAsDeleted();
-        accountRepository.save(acc);
     }
 
-    // ======================
-    // HELPERS
-    // ======================
     private String normalizeName(String name) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Nome da carteira é obrigatório");
@@ -139,10 +134,10 @@ public class AccountService {
         return name.trim();
     }
 
-    private AccountResponse toResponse(Account acc) {
+    private AccountResponse toResponse(Account acc, UUID userId) {
         return new AccountResponse(
                 acc.getId(),
-                acc.getUserId(),
+                userId,
                 acc.getName(),
                 acc.isActive()
         );

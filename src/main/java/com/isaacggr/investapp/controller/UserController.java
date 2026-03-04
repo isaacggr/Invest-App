@@ -8,6 +8,8 @@ import com.isaacggr.investapp.dto.user.UpdateUserNameRequest;
 import com.isaacggr.investapp.dto.user.UserResponse;
 import com.isaacggr.investapp.service.UserService;
 
+import jakarta.validation.Valid;
+
 import java.net.URI;
 import java.util.UUID;
 
@@ -23,7 +25,7 @@ public class UserController {
 
     // CREATE
     @PostMapping
-    public ResponseEntity<UserResponse> create(@RequestBody CreateUserRequest req) {
+    public ResponseEntity<UserResponse> create(@Valid @RequestBody CreateUserRequest req) {
         UserResponse created = service.create(req);
         return ResponseEntity
                 .created(URI.create("/users/" + created.id()))

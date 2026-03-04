@@ -8,7 +8,12 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 @Entity
-@Table(name = "accounts")
+@Table(
+    name = "accounts",
+    indexes = {
+        @Index(name = "ix_accounts_user", columnList = "user_id")
+    }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Account {
@@ -18,9 +23,6 @@ public class Account {
     @Column(nullable = false, updatable = false)
     private UUID id;
 
-    // ======================
-    // RELACIONAMENTO COM USER
-    // ======================
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -31,24 +33,17 @@ public class Account {
     @Column(nullable = false)
     private boolean deleted = false;
 
-    // ======================
-    // CONSTRUTOR DE DOMÍNIO
-    // ======================
     public Account(User user, String name) {
         if (user == null) {
             throw new IllegalArgumentException("Usuário é obrigatório");
         }
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Nome da carteira é obrigatório");
-        }
+        String normalizedName = normalizeName(name);
+        validarName(normalizedName);
 
         this.user = user;
-        this.name = name.trim();
+        this.name = normalizedName;
     }
 
-    // ======================
-    // REGRAS DE ESTADO
-    // ======================
     public boolean isActive() {
         return !deleted;
     }
@@ -58,14 +53,21 @@ public class Account {
     }
 
     public void changeName(String name) {
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Nome da carteira inválido");
-        }
-        this.name = name.trim();
+        String normalizedName = normalizeName(name);
+        validarName(normalizedName);
+        this.name = normalizedName;
     }
 
-    // útil futuramente
-    public UUID getUserId() {
-        return user.getId();
+    private String normalizeName(String name) {
+        return name == null ? null : name.trim();
+    }
+
+    private void validarName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Nome da carteira é obrigatório");
+        }
+        if (name.length() > 80) {
+            throw new IllegalArgumentException("Nome da carteira deve ter no máximo 80 caracteres");
+        }
     }
 }
