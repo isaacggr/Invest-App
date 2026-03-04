@@ -57,7 +57,6 @@ public class Transaction {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    // Construtor de domínio (criação correta)
     public Transaction(
             Account account,
             Stock stock,
@@ -80,7 +79,6 @@ public class Transaction {
         this.notes = normalizeNotes(notes);
     }
 
-    // Se você permitir edição depois (opcional e controlado)
     public void changeNotes(String notes) {
         this.notes = normalizeNotes(notes);
     }
@@ -94,7 +92,6 @@ public class Transaction {
     @PrePersist
     void prePersist() {
         createdAt = Instant.now();
-        // garante consistência mesmo se alguém criar via reflection/jpa
         if (fees == null) fees = BigDecimal.ZERO;
         notes = normalizeNotes(notes);
     }

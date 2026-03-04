@@ -25,7 +25,6 @@ public class PositionService {
         this.transactionRepository = transactionRepository;
     }
 
-    // ✅ NÃO MUDEI A ASSINATURA (para não quebrar o TransactionService)
     @Transactional(readOnly = true)
     public PositionResponse calculatePosition(UUID accountId, UUID stockId, String ticker) {
         if (accountId == null) throw new IllegalArgumentException("accountId é obrigatório");
@@ -119,7 +118,6 @@ public class PositionService {
             acc.totalCost = BigDecimal.ZERO;
             acc.avg = BigDecimal.ZERO;
         } else {
-            // mantém o avg e ajusta custo proporcional (seu comportamento original)
             acc.totalCost = acc.avg.multiply(acc.qty).setScale(6, RoundingMode.HALF_UP);
         }
     }
