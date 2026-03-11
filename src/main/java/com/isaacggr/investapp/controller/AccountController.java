@@ -1,6 +1,8 @@
 package com.isaacggr.investapp.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import com.isaacggr.investapp.dto.account.AccountResponse;
@@ -14,6 +16,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/accounts")
+@PreAuthorize("isAuthenticated()")
 public class AccountController {
 
     private final AccountService service;
@@ -31,9 +34,10 @@ public class AccountController {
                 .body(created);
     }
 
-    // LIST by user
+    // LIST by user (extrai userId do token JWT)
     @GetMapping
-    public ResponseEntity<List<AccountResponse>> listByUser(@RequestParam UUID userId) {
+    public ResponseEntity<List<AccountResponse>> listByUser() {
+        UUID userId = extractUserIdFromToken();
         return ResponseEntity.ok(service.listByUser(userId));
     }
 
@@ -57,5 +61,14 @@ public class AccountController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Extrai o userId do token JWT (do SecurityContext)
+     */
+    private UUID extractUserIdFromToken() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userIdString = authentication.getPrincipal().toString();
+        return UUID.fromString(userIdString);
     }
 }

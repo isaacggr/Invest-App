@@ -5,12 +5,14 @@ import com.isaacggr.investapp.dto.transaction.CreateTransactionResultResponse;
 import com.isaacggr.investapp.service.TransactionService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/accounts/{accountId}/transactions")
+@PreAuthorize("isAuthenticated()")
 public class TransactionController {
 
     private final TransactionService transactionService;

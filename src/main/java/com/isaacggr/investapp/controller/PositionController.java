@@ -5,6 +5,7 @@ import com.isaacggr.investapp.entity.Stock;
 import com.isaacggr.investapp.exception.ResourceNotFoundException;
 import com.isaacggr.investapp.repository.StockRepository;
 import com.isaacggr.investapp.service.PositionService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/accounts/{accountId}/positions")
+@PreAuthorize("isAuthenticated()")
 public class PositionController {
 
     private final PositionService positionService;
