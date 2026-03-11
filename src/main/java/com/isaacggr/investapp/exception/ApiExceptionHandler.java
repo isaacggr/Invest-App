@@ -1,5 +1,6 @@
 package com.isaacggr.investapp.exception;
 
+import com.isaacggr.investapp.security.JwtAuthenticationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,27 @@ import java.time.Instant;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    // ======================
+    // 401 - JWT AUTHENTICATION
+    // ======================
+    @ExceptionHandler(JwtAuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleJwtAuthentication(
+            JwtAuthenticationException ex,
+            HttpServletRequest request
+    ) {
+        var status = HttpStatus.UNAUTHORIZED;
+
+        return ResponseEntity.status(status).body(
+                new ErrorResponse(
+                        Instant.now(),
+                        status.value(),
+                        "Unauthorized",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
 
     // ======================
     // 404 - NOT FOUND
@@ -127,13 +149,16 @@ public class ApiExceptionHandler {
             HttpServletRequest request
     ) {
         var status = HttpStatus.INTERNAL_SERVER_ERROR;
+        
+        // Log para debug (opcional)
+        ex.printStackTrace();
 
         return ResponseEntity.status(status).body(
                 new ErrorResponse(
                         Instant.now(),
                         status.value(),
                         "Internal Server Error",
-                        "Erro inesperado",
+                        "Erro inesperado: " + ex.getMessage(),
                         request.getRequestURI()
                 )
         );
