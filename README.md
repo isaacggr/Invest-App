@@ -13,6 +13,9 @@ O projeto foi desenvolvido com foco em **boas práticas de desenvolvimento backe
 - Java 21
 - Spring Boot
 - Spring Data JPA
+- Spring Security
+- JWT (JJWT 0.11.5)
+- BCrypt
 - MySQL
 - Docker
 - Lombok
@@ -153,6 +156,103 @@ Algumas validações implementadas:
 
 ---
 
+# Autenticação e Autorização
+
+## JWT (JSON Web Token)
+
+A API utiliza **JWT** para autenticação stateless. Todos os endpoints (exceto registro e login) são protegidos.
+
+### Tecnologias
+
+- Spring Security
+- JJWT 0.11.5
+- BCrypt (hashing de senhas)
+
+### Fluxo de Autenticação
+
+1. Usuário cria conta em `POST /users` (público)
+2. Usuário faz login em `POST /auth/login` (público)
+3. API retorna JWT token válido por 1 hora
+4. Cliente envia token em `Authorization: Bearer {token}` em todas as requisições protegidas
+5. Filtro JWT valida o token e extrai o userId
+6. Requisição é processada com contexto de segurança
+
+### Endpoints de Autenticação
+
+**Criar Usuário (Público)**
+
+```
+POST /users
+Content-Type: application/json
+
+{
+  "name": "Isaac Gregório",
+  "email": "isaac@example.com",
+  "password": "senha123456"
+}
+```
+
+Resposta:
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Isaac Gregório",
+  "email": "isaac@example.com",
+  "active": true
+}
+```
+
+**Fazer Login (Público)**
+
+```
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "isaac@example.com",
+  "password": "senha123456"
+}
+```
+
+Resposta:
+```json
+{
+  "token": "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJlbWFpbCI6ImlzYWFjQGV4YW1wbGUuY29tIiwiaWF0IjoxNzczMjU4NTI5LCJleHAiOjE3NzMyNjIxMjl9.xxx",
+  "type": "Bearer",
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "isaac@example.com",
+  "expiresIn": 3600
+}
+```
+
+### Usando o Token
+
+Copie o valor de `token` e use em todas as requisições protegidas:
+
+```
+GET /accounts
+Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI1NTBlODQwMC...
+```
+
+### Segurança
+
+- ✅ Senhas codificadas com BCrypt
+- ✅ Tokens assinados com HMAC-SHA512
+- ✅ Sessão stateless (sem estado no servidor)
+- ✅ Token com expiração automática (1 hora)
+- ✅ UserId extraído do token (impossível forjar)
+
+### Configuração
+
+No `application.properties`:
+
+```properties
+app.jwt.secret=${JWT_SECRET:sua-chave-secreta-super-segura-minimo-64-caracteres-para-hs512-algorithm-test}
+app.jwt.expiration=${JWT_EXPIRATION:3600000}
+```
+
+---
+
 # Exemplo de Transação
 
 Endpoint
@@ -186,7 +286,13 @@ Resposta
 
 # Endpoints Principais
 
-## Usuários
+## Autenticação
+
+Login
+
+```
+POST /auth/login
+```
 
 Criar usuário
 
@@ -194,10 +300,14 @@ Criar usuário
 POST /users
 ```
 
-Listar usuários
+---
+
+## Usuários
+
+Obter usuário
 
 ```
-GET /users
+GET /users/{id}
 ```
 
 Atualizar nome
@@ -212,6 +322,8 @@ Deletar usuário
 DELETE /users/{id}
 ```
 
+⚠️ **Todos requerem autenticação (Bearer Token)**
+
 ---
 
 ## Carteiras
@@ -222,10 +334,10 @@ Criar carteira
 POST /accounts
 ```
 
-Listar carteiras de um usuário
+Listar carteiras do usuário (extrai userId do token)
 
 ```
-GET /accounts/user/{userId}
+GET /accounts
 ```
 
 Atualizar nome da carteira
@@ -240,6 +352,8 @@ Deletar carteira
 DELETE /accounts/{id}
 ```
 
+⚠️ **Todos requerem autenticação (Bearer Token)**
+
 ---
 
 ## Transações
@@ -249,6 +363,8 @@ Criar transação
 ```
 POST /api/accounts/{accountId}/transactions
 ```
+
+⚠️ **Requer autenticação (Bearer Token)**
 
 ---
 
@@ -271,6 +387,8 @@ Carteira completa
 ```
 GET /api/accounts/{accountId}/positions
 ```
+
+⚠️ **Todos requerem autenticação (Bearer Token)**
 
 ---
 
